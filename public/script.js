@@ -1,5 +1,5 @@
 async function searchProducts() {
-    const query = document.getElementById('query').value;
+    const query = document.getElementById('query').value.toLowerCase();
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = 'Идет поиск...';
 
@@ -7,25 +7,32 @@ async function searchProducts() {
     
     try {
         // Используем правильный API URL
-        const url = `https://skidkaonline.ru/apiv3/products/?limit=30&offset=0&shop_id=9&city_id=72&fields=id,name,name2,shops_ids,url,noted,discount_url,discount_name,date,notalladdr,image336,imagefull,brands,pricebefore,priceafter,discount_type,discount,externalurl,countPlus,countMinus,comments,desc,color,daystitle,liked,started_today,published_today&query=${encodeURIComponent(query)}`;
+        const url = `https://skidkaonline.ru/apiv3/products/?limit=30&offset=0&shop_id=9&city_id=72&fields=id,name,name2,shops_ids,url,noted,discount_url,discount_name,date,notalladdr,image336,imagefull,brands,pricebefore,priceafter,discount_type,discount,externalurl,countPlus,countMinus,comments,desc,color,daystitle,liked,started_today,published_today`;
         console.log(`Запрос к API: ${url}`);
         const response = await axios.get(url);
         console.log('Ответ от API:', response.data);
 
         if (response.data.products) {
             const products = response.data.products;
+            // Фильтруем продукты на клиентской стороне
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(query)
+            );
             resultsDiv.innerHTML = '';
-            products.forEach(product => {
+            filteredProducts.forEach(product => {
                 console.log(`Обработка продукта: ${product.name}`);
                 const productDiv = document.createElement('div');
                 productDiv.innerHTML = `
                     <h2>${product.name}</h2>
                     <p>Цена: ${product.priceafter} руб.</p>
                     <img src="${product.image336.src}" alt="${product.name}" style="max-width: 200px;">
-                    <p>Акция действует с ${product.startdate} по ${product.enddate}. ${calculateDaysLeft(product.enddate)}</p>
+                    <p>Акция действует с ${formatDate(product.startdate)} по ${formatDate(product.enddate)}. ${calculateDaysLeft(product.enddate)}</p>
                 `;
                 resultsDiv.appendChild(productDiv);
             });
+            if (filteredProducts.length === 0) {
+                resultsDiv.innerHTML = 'Товары не найдены.';
+            }
         } else {
             resultsDiv.innerHTML = 'Товары не найдены.';
             console.log('Товары не найдены.');
@@ -49,4 +56,9 @@ function calculateDaysLeft(enddateStr) {
     } else {
         return `Осталось ${daysLeft} дней`;
     }
+}
+
+function formatDate(dateStr) {
+    const options = { year: '2-digit', month: '2-digit', day: '2-digit' };
+    return new Date(dateStr).toLocaleDateString('ru-RU', options);
 }
